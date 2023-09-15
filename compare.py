@@ -1,80 +1,72 @@
 import os
-from pydub import AudioSegment
-import librosa
+import torchaudio
+import torch
+import torch.nn.functional as F
 import numpy as np
-
 import logging
+
 logging.basicConfig(level=logging.INFO)  # Set the logging level to INFO
 
-def convert_binary_to_wav(binary_file_path, wav_file_path, sample_width=2, frame_rate=44100):
+# Ensure CUDA (GPU support) is available
+if not torch.cuda.is_available():
+    raise Exception("CUDA (GPU support) is not available.")
+
+# Set the device to GPU
+device = torch.device("cuda")
+
+def convert_binary_to_tensor(binary_file_path, sample_rate=44100):
     # Load the binary data
     binary_data = open(binary_file_path, 'rb').read()
+    
+    # Convert the binary data to a PyTorch tensor
+    audio_tensor, sample_rate = torchaudio.load(io.BytesIO(binary_data), sample_rate=sample_rate)
+    
+    return audio_tensor
 
-    # Create an AudioSegment from the binary data
-    audio = AudioSegment(
-        data=binary_data,
-        sample_width=sample_width,
-        frame_rate=frame_rate,
-        channels=1  # Mono audio
-    )
+def trim_audio(audio_tensor, duration_in_seconds=300):
+    # Calculate the number of frames to keep for the specified duration
+    num_frames = int(duration_in_seconds * audio_tensor.shape[1] / audio_tensor.shape[0])
+    
+    # Trim the audio tensor
+    trimmed_audio = audio_tensor[:, :num_frames]
+    
+    return trimmed_audio
 
-    # Export the AudioSegment as a WAV file
-    audio.export(wav_file_path, format="wav")
+def find_similar_segments(audio1_path, audio2_path, threshold=0.95, duration_to_trim_seconds=300):
+    # Convert binary files to PyTorch tensors
+    audio1_tensor = convert_binary_to_tensor(audio1_path)
+    audio2_tensor = convert_binary_to_tensor(audio2_path)
 
-def trim_audio(file_path, output_path, duration_in_seconds=300):
-    # Convert the binary file to WAV format
-    temp_wav_file = "temp_audio.wav"
-    convert_binary_to_wav(file_path, temp_wav_file)
+    # Trim the input tensors to the specified duration
+    audio1_trimmed = trim_audio(audio1_tensor, duration_to_trim_seconds)
+    audio2_trimmed = trim_audio(audio2_tensor, duration_to_trim_seconds)
 
-    # Load the audio using pydub
-    audio = AudioSegment.from_file(temp_wav_file)
-
-    # Trim the audio to the specified duration (in milliseconds)
-    trimmed_audio = audio[:duration_in_seconds * 1000]
-
-    # Export the trimmed audio as a WAV file
-    trimmed_audio.export(output_path, format="wav")
-
-    # Clean up temporary WAV file
-    os.remove(temp_wav_file)
-
-def find_similar_segments(file1_path, file2_path, threshold=0.95, duration_to_trim_seconds=300):
-    # Trim the input files to the specified duration
-    trimmed_file1_path = "trimmed_file1.wav"
-    trimmed_file2_path = "trimmed_file2.wav"
-    trim_audio(file1_path, trimmed_file1_path, duration_to_trim_seconds)
-    trim_audio(file2_path, trimmed_file2_path, duration_to_trim_seconds)
-
-    # Load audio from trimmed WAV files using pydub
-    audio1 = AudioSegment.from_file(trimmed_file1_path)
-    audio2 = AudioSegment.from_file(trimmed_file2_path)
+    # Transfer tensors to GPU
+    audio1_trimmed = audio1_trimmed.to(device)
+    audio2_trimmed = audio2_trimmed.to(device)
 
     # Calculate the cross-correlation between the two audio signals
-    cross_corr = np.correlate(audio1.get_array_of_samples(), audio2.get_array_of_samples(), mode='full')
+    cross_corr = F.conv1d(audio1_trimmed, audio2_trimmed.flip(2))
 
     # Normalize cross-correlation values to the range [0, 1]
-    normalized_corr = (cross_corr - np.min(cross_corr)) / (np.max(cross_corr) - np.min(cross_corr))
+    normalized_corr = (cross_corr - torch.min(cross_corr)) / (torch.max(cross_corr) - torch.min(cross_corr))
 
     # Find indices where the correlation exceeds the threshold
-    similar_indices = np.where(normalized_corr >= threshold)[0]
+    similar_indices = torch.where(normalized_corr >= threshold)
 
     # Print the time positions of similar segments
-    if len(similar_indices) > 0:
+    if len(similar_indices[0]) > 0:
         logging.info("Similar segments found:")
-        for index in similar_indices:
-            time_seconds = index / audio1.frame_rate
+        for idx in range(len(similar_indices[0])):
+            time_seconds = similar_indices[2][idx] / audio1_trimmed.shape[2]
             logging.info(f"At {time_seconds:.2f} seconds")
     else:
         logging.info("No similar segments found.")
 
-    # Clean up temporary WAV files
-    os.remove(trimmed_file1_path)
-    os.remove(trimmed_file2_path)
-
 if __name__ == "__main__":
-    file1_path = "../outputvideos/The Office S02E01 The Dundies.bin"  # Replace with the path to your first binary file
-    file2_path = "../outputvideos/The Office S02E03 Office Olympics.bin"  # Replace with the path to your second binary file
+    audio1_path = "../outputvideos/The Office S02E01 The Dundies.bin"  # Replace with the path to your first binary audio file
+    audio2_path = "../outputvideos/The Office S02E03 Office Olympics.bin"  # Replace with the path to your second binary audio file
 
     logging.info("Comparing audio files...")
-    find_similar_segments(file1_path, file2_path)
+    find_similar_segments(audio1_path, audio2_path)
     logging.info("Comparison completed.")
