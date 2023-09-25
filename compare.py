@@ -7,9 +7,6 @@ import logging
 
 logging.basicConfig(level=logging.INFO)  # Set the logging level to INFO
 
-
-
-
 # Ensure CUDA (GPU support) is available
 if not torch.cuda.is_available():
     raise Exception("CUDA (GPU support) is not available.")
@@ -17,7 +14,14 @@ if not torch.cuda.is_available():
 # Set the device to GPU
 device = torch.device("cuda")
 
+def check_file_exists(file_path):
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"File not found: {file_path}")
+
 def convert_binary_to_tensor(binary_file_path, sample_rate=44100):
+    # Check if the file exists
+    check_file_exists(binary_file_path)
+
     # Load the binary data
     binary_data = open(binary_file_path, 'rb').read()
     
@@ -36,6 +40,10 @@ def trim_audio(audio_tensor, duration_in_seconds=300):
     return trimmed_audio
 
 def find_similar_segments(audio1_path, audio2_path, threshold=0.95, duration_to_trim_seconds=300):
+    # Check if the files exist
+    check_file_exists(audio1_path)
+    check_file_exists(audio2_path)
+
     # Convert binary files to PyTorch tensors
     audio1_tensor = convert_binary_to_tensor(audio1_path)
     audio2_tensor = convert_binary_to_tensor(audio2_path)
