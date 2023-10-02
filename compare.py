@@ -39,7 +39,7 @@ def trim_audio(audio_tensor, duration_in_seconds=300):
     
     return trimmed_audio
 
-def find_similar_segments(audio1_path, audio2_path, threshold=0.95, duration_to_trim_seconds=300):
+def find_similar_segments(audio1_path, audio2_path, threshold=0.95, duration_to_trim_seconds=60):
     # Check if the files exist
     check_file_exists(audio1_path)
     check_file_exists(audio2_path)
@@ -48,16 +48,16 @@ def find_similar_segments(audio1_path, audio2_path, threshold=0.95, duration_to_
     audio1_tensor = convert_binary_to_tensor(audio1_path)
     audio2_tensor = convert_binary_to_tensor(audio2_path)
 
-    # Trim the input tensors to the specified duration
-    audio1_trimmed = trim_audio(audio1_tensor, duration_to_trim_seconds)
-    audio2_trimmed = trim_audio(audio2_tensor, duration_to_trim_seconds)
+    # Limit the duration for comparison
+    audio1_tensor = trim_audio(audio1_tensor, duration_to_trim_seconds)
+    audio2_tensor = trim_audio(audio2_tensor, duration_to_trim_seconds)
 
     # Transfer tensors to GPU
-    audio1_trimmed = audio1_trimmed.to(device)
-    audio2_trimmed = audio2_trimmed.to(device)
+    audio1_tensor = audio1_tensor.to(device)
+    audio2_tensor = audio2_tensor.to(device)
 
     # Calculate the cross-correlation between the two audio signals
-    cross_corr = F.conv1d(audio1_trimmed, audio2_trimmed.flip(2))
+    cross_corr = F.conv1d(audio1_tensor, audio2_tensor.flip(2))
 
     # Normalize cross-correlation values to the range [0, 1]
     normalized_corr = (cross_corr - torch.min(cross_corr)) / (torch.max(cross_corr) - torch.min(cross_corr))
@@ -69,7 +69,7 @@ def find_similar_segments(audio1_path, audio2_path, threshold=0.95, duration_to_
     if len(similar_indices[0]) > 0:
         logging.info("Similar segments found:")
         for idx in range(len(similar_indices[0])):
-            time_seconds = similar_indices[2][idx] / audio1_trimmed.shape[2]
+            time_seconds = similar_indices[2][idx] / audio1_tensor.shape[2]
             logging.info(f"At {time_seconds:.2f} seconds")
     else:
         logging.info("No similar segments found.")
