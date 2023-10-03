@@ -14,9 +14,13 @@ if not torch.cuda.is_available():
 # Set the device to GPU
 device = torch.device("cuda")
 
+
+
 def check_file_exists(file_path):
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
+
+
 
 def convert_binary_to_tensor(binary_file_path, sample_rate=44100):
     # Check if the file exists
@@ -30,6 +34,8 @@ def convert_binary_to_tensor(binary_file_path, sample_rate=44100):
     
     return audio_tensor
 
+
+
 def trim_audio(audio_tensor, duration_in_seconds=300):
     # Calculate the number of frames to keep for the specified duration
     num_frames = int(duration_in_seconds * audio_tensor.shape[1] / audio_tensor.shape[0])
@@ -38,6 +44,8 @@ def trim_audio(audio_tensor, duration_in_seconds=300):
     trimmed_audio = audio_tensor[:, :num_frames]
     
     return trimmed_audio
+
+
 
 def find_similar_segments(audio1_path, audio2_path, threshold=0.95, duration_to_trim_seconds=60):
     # Check if the files exist
