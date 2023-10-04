@@ -4,6 +4,7 @@ import numpy as np
 
 # Function to extract audio and convert it to binary representation
 def extract_audio_and_convert_to_binary(input_folder, output_folder):
+    
     # Ensure the output folder exists
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -16,6 +17,7 @@ def extract_audio_and_convert_to_binary(input_folder, output_folder):
         output_path = os.path.join(output_folder, f"{os.path.splitext(mp4_file)[0]}.bin")
 
         try:
+            
             # Load the video clip and extract audio
             video_clip = VideoFileClip(input_path)
             audio = video_clip.audio
@@ -30,6 +32,7 @@ def extract_audio_and_convert_to_binary(input_folder, output_folder):
             print(f"Error processing {mp4_file}: {e}")
 
 if __name__ == "__main__":
+    
     input_folder = "../videos"  # Replace with the path to your input folder containing MP4 files
     output_folder = "../outputvideos"  # Replace with the path where you want to save the binary files
 
