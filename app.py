@@ -35,5 +35,7 @@ if __name__ == "__main__":
     
     input_folder = "../videos"  # Replace with the path to your input folder containing MP4 files
     output_folder = "../outputvideos"  # Replace with the path where you want to save the binary files
+    input_folder1 = "../videos"  # Replace with the path to your input folder containing MP4 files
+    output_folder1 = "../outputvideos"  # Replace with the path where you want to save the binary files
 
     extract_audio_and_convert_to_binary(input_folder, output_folder)

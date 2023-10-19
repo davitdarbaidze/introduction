@@ -85,6 +85,8 @@ def find_similar_segments(audio1_path, audio2_path, threshold=0.95, duration_to_
 if __name__ == "__main__":
     audio1_path = "../outputvideos/The Office S02E01 The Dundies.bin"  # Replace with the path to your first binary audio file
     audio2_path = "../outputvideos/The Office S02E03 Office Olympics.bin"  # Replace with the path to your second binary audio file
+    audio1_path1 = "../outputvideos/The Office S02E02 Sexual Harassment.bin"  # Replace with the path to your first binary audio file
+    audio2_path1 = "../outputvideos/The Office S02E04 The Fire.bin"  # Replace with the path to your second binary audio file
 
     logging.info("Comparing audio files...")
     find_similar_segments(audio1_path, audio2_path)
